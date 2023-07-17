@@ -15,6 +15,7 @@ import org.example.driverapplication.utils.EncryptionUtil;
 import org.example.driverapplication.utils.OnboardingValidator;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,8 +40,8 @@ public class DriverServiceImpl implements IDriverService{
     @Autowired
     private ObjectMapper mapper;
 
-   /* @Autowired
-    BCryptPasswordEncoder passwordEncoder;*/
+    @Autowired
+    PasswordEncoder passwordEncoder;
 
     @Transactional
     public Driver save(Driver driver) throws InternalServerErrorException {
@@ -57,7 +58,8 @@ public class DriverServiceImpl implements IDriverService{
         try {
             Driver driver =  mapper.convertValue(driverProfileDto, Driver.class);
             checkDriverExists(driver.getEmail());
-            driver.setPassword(EncryptionUtil.getEncryptedPwd(driver.getPassword()));
+            //driver.setPassword(EncryptionUtil.getEncryptedPwd(driver.getPassword()));
+            driver.setPassword(passwordEncoder.encode(driver.getPassword()));
             return driverRepository.save(driver);
         } catch(CustomException ex) {
             throw new CustomException(ex.getErrorCode(), ex.getMessage());

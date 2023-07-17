@@ -10,16 +10,24 @@ import org.example.driverapplication.entity.Document;
 import org.example.driverapplication.exception.*;
 import org.example.driverapplication.exception.IllegalArgumentException;
 import org.example.driverapplication.entity.Driver;
+import org.example.driverapplication.model.AuthenticationRequest;
+import org.example.driverapplication.model.AuthenticationResponse;
+import org.example.driverapplication.service.CustomUserDetailsService;
 import org.example.driverapplication.service.DocumentServiceImpl;
 import org.example.driverapplication.service.DriverServiceImpl;
 import org.example.driverapplication.service.OnboardingService;
 import org.example.driverapplication.utils.DocumentValidator;
 import org.example.driverapplication.utils.DriverDetailsValidator;
 import org.example.driverapplication.utils.FileUploadUtil;
+import org.example.driverapplication.utils.JwtUtil;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -43,6 +51,33 @@ public class DriverController {
     @Autowired
     private ObjectMapper mapper;
 
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @Autowired
+    private CustomUserDetailsService userDetailsService;
+
+    @PostMapping("/authenticate")
+    public ResponseEntity<?> createAuthenticationToken(@RequestBody AuthenticationRequest authenticationRequest)
+            throws Exception {
+
+        try {
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
+                    authenticationRequest.getUser(), authenticationRequest.getPassword()));
+        } catch (BadCredentialsException e) {
+            throw new Exception("Incorrect username or password", e);
+        }
+
+        final UserDetails userDetails = userDetailsService.loadUserByUsername(authenticationRequest.getUser());
+
+        final String jwt = jwtUtil.generateToken(userDetails);
+
+        return ResponseEntity.ok(new AuthenticationResponse(jwt));
+    }
+
     @PostMapping("/signup")
     public ResponseEntity<Driver> signup(@RequestBody DriverProfileDto driverProfileDto) throws IllegalArgumentException, InternalServerErrorException, CustomException {
         DriverDetailsValidator.validateDriver(driverProfileDto);
@@ -50,44 +85,6 @@ public class DriverController {
         log.info(" Driver signed up successfully");
         return new ResponseEntity<>(savedDriver, HttpStatus.CREATED);
     }
-
-//    @PostMapping("/{driverId}/documents")
-//    public Document addDocument(@PathVariable Long driverId, @RequestBody Document document) {
-//        document.setDriverId(driverId);
-//        return documentService.saveDocument(document);
-//    }
-
-//    @PutMapping("/{driverId}/documents")
-//    public Document updateDocument(@PathVariable Long driverId, @RequestBody Document document) {
-//        document.setDriverId(driverId);
-//        return documentService.updateDocument(document);
-//    }
-
-    /*@PostMapping("/onboarding")
-    public ResponseEntity<Driver> onboarding(@RequestBody DriverProfileDto driverProfileDto) {
-        Driver driver =  mapper.convertValue(driverProfileDto, Driver.class);
-        Driver onboardedDriver = driverService.onboard(driver);
-        return new ResponseEntity<>(onboardedDriver, HttpStatus.OK);
-    }*/
-
-    /*@PostMapping("/{driverId}/documents")
-    public ResponseEntity<?> uploadDocuments(@RequestParam("file") MultipartFile file, @PathVariable Long driverId) {
-        try {
-            Driver driver = driverService.getDriver(driverId).get();
-            String docUrl = uploadDocument.upload(file);
-            driver.setDocumentUrl(docUrl);
-            driver.setOnboardingStatus(OnboardingStatus.IN_PROGRESS);
-            driverService.save(driver);
-            //async
-            DocumentMessage message = new DocumentMessage();
-            message.setDriverId(driverId);
-            message.setDocumentUrl(docUrl);
-            rabbitTemplate.convertAndSend(BackgroundVerificationConfig.EXCHANGE, BackgroundVerificationConfig.ROUTING_KEY, message);
-            return ResponseEntity.ok(new MessageResponse("Uploaded the file successfully: " + file.getOriginalFilename()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(new MessageResponse("Could not upload the file: " + file.getOriginalFilename() + "!"));
-        }
-    }*/
 
     @PostMapping("/{driverId}/documents")
     public ResponseEntity<?> uploadDocuments(@RequestParam("file") MultipartFile file, @PathVariable Long driverId) throws CustomIOException, IllegalArgumentException, InternalServerErrorException {
