@@ -7,7 +7,7 @@ import lombok.*;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class Document {
+public class DocumentInfo {
     private String documentUrl;
     private Long driverId;
 }

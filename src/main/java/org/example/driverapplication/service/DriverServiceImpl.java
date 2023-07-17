@@ -7,8 +7,9 @@ import org.example.driverapplication.dto.DriverProfileDto;
 import org.example.driverapplication.exception.*;
 import org.example.driverapplication.entity.Driver;
 import org.example.driverapplication.constants.OnboardingStatus;
-import org.example.driverapplication.model.Document;
+import org.example.driverapplication.model.DocumentInfo;
 import org.example.driverapplication.producer.BackgroundVerificationTask;
+import org.example.driverapplication.repository.DocumentRepository;
 import org.example.driverapplication.repository.DriverRepository;
 import org.example.driverapplication.utils.EncryptionUtil;
 import org.example.driverapplication.utils.OnboardingValidator;
@@ -25,6 +26,9 @@ public class DriverServiceImpl implements IDriverService{
 
     @Autowired
     private DriverRepository driverRepository;
+
+    @Autowired
+    private DocumentRepository documentRepository;
 
     @Autowired
     private RabbitTemplate rabbitTemplate;
@@ -94,8 +98,9 @@ public class DriverServiceImpl implements IDriverService{
     public void onboard(Driver driver) {
         driver.setOnboardingStatus(OnboardingStatus.IN_PROGRESS.name());
         driverRepository.save(driver);
-        Document document = new Document();
-        document.setDocumentUrl(driver.getDocumentUrl());
+        String docUrl = documentRepository.findByDriverId(driver.getId()).get().getUrl();
+        DocumentInfo document = new DocumentInfo();
+        document.setDocumentUrl(docUrl);
         document.setDriverId(driver.getId());
         // async task
         backgroundVerificationTask.verify(document);

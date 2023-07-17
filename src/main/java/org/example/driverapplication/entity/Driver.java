@@ -29,7 +29,7 @@ public class Driver {
     private String licenseNumber;
     // other fields
 
-    private String documentUrl;
+    //private String documentUrl;
 
     private boolean available;
 

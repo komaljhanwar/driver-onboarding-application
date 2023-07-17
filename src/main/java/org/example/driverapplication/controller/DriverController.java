@@ -2,12 +2,15 @@ package org.example.driverapplication.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.io.FilenameUtils;
 import org.example.driverapplication.constants.OnboardingStatus;
 import org.example.driverapplication.constants.ResponseCodeMapping;
 import org.example.driverapplication.dto.DriverProfileDto;
+import org.example.driverapplication.entity.Document;
 import org.example.driverapplication.exception.*;
 import org.example.driverapplication.exception.IllegalArgumentException;
 import org.example.driverapplication.entity.Driver;
+import org.example.driverapplication.service.DocumentServiceImpl;
 import org.example.driverapplication.service.DriverServiceImpl;
 import org.example.driverapplication.service.OnboardingService;
 import org.example.driverapplication.utils.DocumentValidator;
@@ -27,6 +30,9 @@ public class DriverController {
 
     @Autowired
     private DriverServiceImpl driverServiceImpl;
+
+    @Autowired
+    private DocumentServiceImpl documentServiceImpl;
 
     @Autowired
     private OnboardingService onboardingService;
@@ -87,18 +93,24 @@ public class DriverController {
     public ResponseEntity<?> uploadDocuments(@RequestParam("file") MultipartFile file, @PathVariable Long driverId) throws CustomIOException, IllegalArgumentException, InternalServerErrorException {
         DocumentValidator.validate(file);
         String filePath = FileUploadUtil.saveFile(file.getOriginalFilename(),file);
-            Driver driver = driverServiceImpl.getDriver(driverId).orElseThrow(() ->
-                    new ResourceNotFoundException(ResponseCodeMapping.DRIVER_NOT_FOUND.getCode(),
-                            ResponseCodeMapping.DRIVER_NOT_FOUND.getMessage() + driverId));
-            driver.setDocumentUrl(filePath);
-            driverServiceImpl.save(driver);
-            log.info("Driver's document uploaded successfully");
+        Driver driver = driverServiceImpl.getDriver(driverId).orElseThrow(() ->
+                new ResourceNotFoundException(ResponseCodeMapping.DRIVER_NOT_FOUND.getCode(), ResponseCodeMapping.DRIVER_NOT_FOUND.getMessage() + driverId));
+        //driver.setDocumentUrl(filePath);
+        //driverServiceImpl.save(driver);
+        Document document = new Document().builder()
+                .driverId(driverId)
+                .url(filePath)
+                .type(FilenameUtils.getExtension(file.getOriginalFilename()))
+                .build();
+        documentServiceImpl.saveDocument(document);
 
-            if(driver.getOnboardingStatus() == null) {
-                log.info("Onboradring started");
-                onboardingService.trigger(driver);
+        log.info("Driver's document uploaded successfully");
+
+        if(driver.getOnboardingStatus() == null) {
+            log.info("Onboarding started");
+            onboardingService.trigger(driver);
         }
-            return ResponseEntity.ok(new MessageResponse("Uploaded the file successfully: " + file.getOriginalFilename()));
+        return ResponseEntity.ok(new MessageResponse("Uploaded the file successfully: " + file.getOriginalFilename()));
     }
 
     @PutMapping("/{driverId}/status")

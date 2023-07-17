@@ -1,17 +1,18 @@
-/*
 package org.example.driverapplication.service;
 
+import lombok.extern.log4j.Log4j2;
+import org.example.driverapplication.entity.Document;
+import org.example.driverapplication.repository.DocumentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+@Log4j2
 @Service
-public class DocumentService {
+public class DocumentServiceImpl {
     @Autowired
     private DocumentRepository documentRepository;
 
     public Document saveDocument(Document document) {
-
-
         return documentRepository.save(document);
     }
 
@@ -32,4 +33,3 @@ public class DocumentService {
 
 }
 
-*/

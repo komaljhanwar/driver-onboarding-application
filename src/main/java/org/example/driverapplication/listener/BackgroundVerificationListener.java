@@ -8,7 +8,7 @@ import org.example.driverapplication.constants.ResponseCodeMapping;
 import org.example.driverapplication.constants.ShipmentStatus;
 import org.example.driverapplication.entity.Driver;
 import org.example.driverapplication.exception.ResourceNotFoundException;
-import org.example.driverapplication.model.Document;
+import org.example.driverapplication.model.DocumentInfo;
 import org.example.driverapplication.model.TrackingShipmentInfo;
 import org.example.driverapplication.repository.DriverRepository;
 import org.example.driverapplication.service.ShipmentService;
@@ -33,7 +33,7 @@ public class BackgroundVerificationListener {
 
 
    @RabbitListener(queues = BackgroundVerificationConfig.QUEUE)
-    public void listen(Document document) {
+    public void listen(DocumentInfo document) {
         Driver driver = driverRepository.findById(document.getDriverId()).orElseThrow(() ->
                 new ResourceNotFoundException(ResponseCodeMapping.DRIVER_NOT_FOUND.getCode(),
                         ResponseCodeMapping.DRIVER_NOT_FOUND.getMessage()));
